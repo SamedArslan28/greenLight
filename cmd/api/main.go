@@ -7,6 +7,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"greenlight.samedarslan28.net/internal/data"
+	"greenlight.samedarslan28.net/internal/jsonlog"
 	"log"
 	"net/http"
 	"os"
@@ -28,7 +29,7 @@ type config struct {
 
 type application struct {
 	config config
-	logger *log.Logger
+	logger *jsonlog.Logger
 	models data.Models
 }
 
@@ -44,7 +45,7 @@ func main() {
 
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
 
 	db, err := openDB(cfg)
 	if err != nil {
@@ -52,7 +53,7 @@ func main() {
 	}
 	defer db.Close()
 
-	logger.Printf("database connection pool established")
+	logger.PrintInfo("database connection pool established", nil)
 
 	app := &application{
 		config: cfg,
@@ -63,12 +64,17 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
+		ErrorLog:     log.New(logger, "", 0),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
-	logger.Printf("Starting server on port %d", cfg.port)
+	logger.PrintInfo("starting server", map[string]string{
+		"addr": srv.Addr,
+		"env":  cfg.env,
+	})
+
 	if err := srv.ListenAndServe(); err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 }
 
