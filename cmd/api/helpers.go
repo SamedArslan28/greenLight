@@ -134,12 +134,15 @@ func mustGetEnv(key string) string {
 }
 
 func (app *application) background(fn func()) {
+	app.wg.Add(1)
 	go func() {
 		defer func() {
+			defer app.wg.Done()
 			if err := recover(); err != nil {
 				app.logger.PrintError(fmt.Errorf("%s", err), nil)
 			}
 		}()
 		fn()
 	}()
+	app.wg.Wait()
 }
