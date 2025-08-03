@@ -7,8 +7,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"greenlight.samedarslan28.net/internal/validator"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -121,4 +123,12 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, val
 		return defaultValue
 	}
 	return integer
+}
+
+func mustGetEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("Environment variable %s is not set", key)
+	}
+	return value
 }
