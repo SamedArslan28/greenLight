@@ -11,15 +11,16 @@ import (
 )
 
 const (
-	ScopeActivation = "activation"
+	ScopeActivation     = "activation"
+	ScopeAuthentication = "authentication"
 )
 
 type Token struct {
-	Plaintext string
-	Hash      []byte
-	UserID    int64
-	Expiry    time.Time
-	Scope     string
+	Plaintext string    `json:"token"`
+	Hash      []byte    `json:"-"`
+	UserID    int64     `json:"-"`
+	Expiry    time.Time `json:"expiry"`
+	Scope     string    `json:"-"`
 }
 
 func generateToken(scope string, userID int64, ttl time.Duration) (*Token, error) {
@@ -48,8 +49,8 @@ type TokenModel struct {
 	DB *sql.DB
 }
 
-func (t TokenModel) New(userID int64, ttl time.Duration) (*Token, error) {
-	token, err := generateToken(ScopeActivation, userID, ttl)
+func (t TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+	token, err := generateToken(scope, userID, ttl)
 	if err != nil {
 		return nil, err
 	}
