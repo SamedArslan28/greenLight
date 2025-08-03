@@ -5,6 +5,7 @@ import (
 	"greenlight.samedarslan28.net/internal/data"
 	"greenlight.samedarslan28.net/internal/validator"
 	"net/http"
+	"time"
 )
 
 func (app *application) registerUserHandler(writer http.ResponseWriter, request *http.Request) {
@@ -51,8 +52,20 @@ func (app *application) registerUserHandler(writer http.ResponseWriter, request 
 		return
 	}
 
+	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour)
+	if err != nil {
+		app.serverErrorResponse(writer, request, err)
+		return
+	}
+
 	app.background(func() {
-		err = app.mailer.Send(user.Email, "user_welcome.gohtml", user)
+
+		d := map[string]interface{}{
+			"activationToken": token.Plaintext,
+			"userID":          user.ID,
+		}
+
+		err = app.mailer.Send(user.Email, "user_welcome.gohtml", d)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 			return
