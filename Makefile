@@ -26,7 +26,7 @@ db/migrations/up: confirm
 db/migrations/new:
 	@echo 'Creating migration files for ${name}...'
 	migrate create -seq -ext=.sql -dir=./migrations ${name}
-.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new audit
+
 
 audit: vendor
 	@echo 'Formatting code...'
@@ -44,3 +44,16 @@ vendor:
 	go mod verify
 	@echo 'Vendoring dependencies...'
 	go mod vendor
+
+current_time = $(shell date -u "+%Y-%m-%dT%H:%M:%SZ")
+git_description = $(shell git describe --always --dirty --tags --long)
+linker_flags ='-s -X main.buildTime=${current_time} -X main.version=${git_description}'
+
+build/api:
+	@echo 'Building cmd/api for local system...'
+	go build -ldflags=${linker_flags} -o ./bin/api ./cmd/api
+
+	@echo 'Building cmd/api for linux/amd64...'
+	GOOS=linux GOARCH=amd64 go build -ldflags=${linker_flags} -o ./bin/linux_amd64/api ./cmd/api
+
+.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new audit build/api

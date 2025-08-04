@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"github.com/felixge/httpsnoop"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -20,7 +21,10 @@ import (
 	"time"
 )
 
-const version = "1.0.0"
+var (
+	version   string
+	buildTime string
+)
 
 type config struct {
 	port int
@@ -72,8 +76,15 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.abdulsamedarslan.net>", "SMTP sender")
+	displayVersion := flag.Bool("version", false, "Display version and exit")
 
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		fmt.Printf("Build time:\t%s\n", buildTime)
+		os.Exit(0)
+	}
 
 	logger := jsonlog.NewLogger(os.Stdout, jsonlog.LevelInfo)
 
