@@ -11,7 +11,7 @@ confirm:
 
 ## run/api: run the cmd/api application
 run/api:
-	@go run ./cmd/api
+	@go run ./cmd/api -db-dsn="${DB_DSN}"
 
 ## db/psql: connect to the database using psql
 db/psql:
@@ -26,4 +26,21 @@ db/migrations/up: confirm
 db/migrations/new:
 	@echo 'Creating migration files for ${name}...'
 	migrate create -seq -ext=.sql -dir=./migrations ${name}
-.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new
+.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new audit
+
+audit: vendor
+	@echo 'Formatting code...'
+	go fmt ./...
+
+	@echo 'Vetting code...'
+	go vet ./...
+	staticcheck ./...
+
+	@echo 'Running tests...'
+	go test -race -vet=off ./...
+vendor:
+	@echo 'Tidying and verifying module dependencies...'
+	go mod tidy
+	go mod verify
+	@echo 'Vendoring dependencies...'
+	go mod vendor
