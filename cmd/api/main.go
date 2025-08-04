@@ -11,6 +11,7 @@ import (
 	"greenlight.samedarslan28.net/internal/jsonlog"
 	"greenlight.samedarslan28.net/internal/mailer"
 	"log"
+	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -139,4 +140,25 @@ func openDB(cfg config) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func (app *application) metrics(next http.Handler) http.Handler {
+	// Initialize expvar variables once when the middleware is created.
+	totalRequestsReceived := expvar.NewInt("total_requests_received")
+	totalResponsesSent := expvar.NewInt("total_responses_sent")
+	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
+
+	// Return the middleware handler.
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now() // Record request start time
+
+		totalRequestsReceived.Add(1) // Increment request counter
+
+		next.ServeHTTP(w, r) // Call next handler in chain
+
+		totalResponsesSent.Add(1) // Increment response counter
+
+		duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(duration) // Add processing time
+	})
 }
