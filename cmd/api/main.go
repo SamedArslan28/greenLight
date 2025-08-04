@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"github.com/felixge/httpsnoop"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"greenlight.samedarslan28.net/internal/data"
@@ -14,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -143,22 +145,18 @@ func openDB(cfg config) (*sql.DB, error) {
 }
 
 func (app *application) metrics(next http.Handler) http.Handler {
-	// Initialize expvar variables once when the middleware is created.
 	totalRequestsReceived := expvar.NewInt("total_requests_received")
 	totalResponsesSent := expvar.NewInt("total_responses_sent")
 	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
+	totalResponsesSentByStatus := expvar.NewMap("total_responses_sent_by_status")
 
-	// Return the middleware handler.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now() // Record request start time
+		totalRequestsReceived.Add(1)
+		metrics := httpsnoop.CaptureMetrics(next, w, r)
+		totalResponsesSent.Add(1)
 
-		totalRequestsReceived.Add(1) // Increment request counter
-
-		next.ServeHTTP(w, r) // Call next handler in chain
-
-		totalResponsesSent.Add(1) // Increment response counter
-
-		duration := time.Since(start).Microseconds()
-		totalProcessingTimeMicroseconds.Add(duration) // Add processing time
+		next.ServeHTTP(w, r)
+		totalProcessingTimeMicroseconds.Add(metrics.Duration.Microseconds())
+		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
 	})
 }
