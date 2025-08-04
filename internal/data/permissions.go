@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"github.com/lib/pq"
 	"time"
 )
 
@@ -55,4 +56,19 @@ WHERE users.id = $1;
 		}
 	}
 	return permissions, nil
+}
+
+func (p PermissionModel) AddForUser(userID int64, codes ...string) error {
+	query := `
+INSERT INTO users_permissions
+SELECT $1, permissions.id FROM permissions WHERE permissions.code = ANY($2)
+`
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := p.DB.ExecContext(ctx, query, userID, pq.Array(codes))
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
