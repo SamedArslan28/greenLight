@@ -9,7 +9,6 @@ import (
 )
 
 func (app *application) registerUserHandler(writer http.ResponseWriter, request *http.Request) {
-
 	var input struct {
 		Username string `json:"name"`
 		Email    string `json:"email"`
@@ -133,5 +132,4 @@ func (app *application) activateUserHandler(writer http.ResponseWriter, request 
 	if err != nil {
 		app.serverErrorResponse(writer, request, err)
 	}
-
 }

@@ -156,3 +156,19 @@ func (app *application) requirePermission(code string, next http.HandlerFunc) ht
 	})
 	return app.requireActivatedUser(fn)
 }
+
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			// Set the necessary preflight response headers
+			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+			// Respond with 200 OK and return early
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
