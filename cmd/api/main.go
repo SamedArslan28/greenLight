@@ -27,14 +27,9 @@ var (
 )
 
 type config struct {
-	port int
-	env  string
-	db   struct {
-		dsn          string
-		maxOpenConns int
-		maxIdleConns int
-		maxIdleTime  string
-	}
+	port    int
+	env     string
+	db      dbConfig
 	limiter struct {
 		rps     float64
 		burst   int
@@ -47,6 +42,13 @@ type config struct {
 		password string
 		sender   string
 	}
+}
+
+type dbConfig struct {
+	dsn          string
+	maxOpenConns int
+	maxIdleConns int
+	maxIdleTime  string
 }
 
 type application struct {
