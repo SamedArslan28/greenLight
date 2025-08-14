@@ -5,19 +5,35 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/lib/pq"
 	"greenlight.samedarslan28.net/internal/validator"
-	"time"
 )
 
+// Movie represents a film in the system.
+// Used for storing and retrieving movie details in the API.
 type Movie struct {
-	ID        int64     `json:"id"`
+	// Unique identifier for the movie
+	ID int64 `json:"id" example:"123"`
+
+	// Timestamp when the movie was created (internal use)
 	CreatedAt time.Time `json:"-"`
-	Title     string    `json:"title"`
-	Year      int32     `json:"year,omitempty"`
-	Runtime   Runtime   `json:"runtime,omitempty"`
-	Genres    []string  `json:"genres,omitempty"`
-	Version   int32     `json:"version"`
+
+	// Title of the movie
+	Title string `json:"title" example:"Inception"`
+
+	// Release year of the movie
+	Year int32 `json:"year,omitempty" example:"2010"`
+
+	// Runtime duration of the movie (in minutes)
+	Runtime Runtime `json:"runtime,omitempty" example:"148" swaggertype:"integer"`
+
+	// List of genres for the movie
+	Genres []string `json:"genres,omitempty" example:"[\"Action\", \"Sci-Fi\"]"`
+
+	// Version number used for optimistic locking
+	Version int32 `json:"version" example:"1"`
 }
 
 func ValidateMovie(v *validator.Validator, input *Movie) {

@@ -3,9 +3,10 @@ package mailer
 import (
 	"bytes"
 	"embed"
-	"github.com/go-mail/mail/v2"
 	"html/template"
 	"time"
+
+	"github.com/go-mail/mail/v2"
 )
 
 //go:embed "templates"

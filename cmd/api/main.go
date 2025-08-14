@@ -1,3 +1,17 @@
+// @title Greenlight API
+// @version 2.0
+// @description This is the Greenlight movie API.
+// @termsOfService http://greenlight.abdulsamedarslan.net/terms/
+
+// @contact.name Abdulsamed Arslan
+// @contact.email youremail@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:4000
+// @BasePath /v1
+// @schemes http
 package main
 
 import (
@@ -6,12 +20,6 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/felixge/httpsnoop"
-	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
-	"greenlight.samedarslan28.net/internal/data"
-	"greenlight.samedarslan28.net/internal/jsonlog"
-	"greenlight.samedarslan28.net/internal/mailer"
 	"log"
 	"net/http"
 	"os"
@@ -19,11 +27,24 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/felixge/httpsnoop"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	_ "greenlight.samedarslan28.net/docs"
+	"greenlight.samedarslan28.net/internal/data"
+	"greenlight.samedarslan28.net/internal/jsonlog"
+	"greenlight.samedarslan28.net/internal/mailer"
 )
 
 var (
 	version   string
 	buildTime string
+
+	totalRequestsReceived           = expvar.NewInt("total_requests_received")
+	totalResponsesSent              = expvar.NewInt("total_responses_sent")
+	totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_μs")
+	totalResponsesSentByStatus      = expvar.NewMap("total_responses_sent_by_status")
 )
 
 type config struct {
@@ -167,17 +188,12 @@ func openDB(cfg config) (*sql.DB, error) {
 }
 
 func (app *application) metrics(next http.Handler) http.Handler {
-	totalRequestsReceived := expvar.NewInt("total_requests_received")
-	totalResponsesSent := expvar.NewInt("total_responses_sent")
-	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
-	totalResponsesSentByStatus := expvar.NewMap("total_responses_sent_by_status")
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		totalRequestsReceived.Add(1)
-		metrics := httpsnoop.CaptureMetrics(next, w, r)
-		totalResponsesSent.Add(1)
 
-		next.ServeHTTP(w, r)
+		metrics := httpsnoop.CaptureMetrics(next, w, r)
+
+		totalResponsesSent.Add(1)
 		totalProcessingTimeMicroseconds.Add(metrics.Duration.Microseconds())
 		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
 	})

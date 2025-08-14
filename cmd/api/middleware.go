@@ -3,25 +3,26 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/tomasen/realip"
-	"golang.org/x/time/rate"
-	"greenlight.samedarslan28.net/internal/data"
-	"greenlight.samedarslan28.net/internal/validator"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tomasen/realip"
+	"golang.org/x/time/rate"
+	"greenlight.samedarslan28.net/internal/data"
+	"greenlight.samedarslan28.net/internal/validator"
 )
 
 func (app *application) recoverPanic(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				writer.Header().Set("Connection", "close")
-				app.serverErrorResponse(writer, request, fmt.Errorf("%s", err))
+				w.Header().Set("Connection", "close")
+				app.serverErrorResponse(w, r, fmt.Errorf("%v", err))
 			}
 		}()
-		next.ServeHTTP(writer, request)
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -35,12 +36,14 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		mu      sync.Mutex
 		clients = make(map[string]*client)
 	)
+
+	// Clean up old clients periodically
 	go func() {
 		for {
 			time.Sleep(time.Minute)
 			mu.Lock()
-			for ip, client := range clients {
-				if time.Since(client.lastSeen) > 3*time.Minute {
+			for ip, c := range clients {
+				if time.Since(c.lastSeen) > 3*time.Minute {
 					delete(clients, ip)
 				}
 			}
@@ -49,11 +52,16 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 	}()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip Swagger
+		if strings.HasPrefix(r.URL.Path, "/v1/swagger/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if app.config.limiter.enabled {
 			ip := realip.FromRequest(r)
 			mu.Lock()
-
-			if _, found := clients[ip]; !found {
+			if _, ok := clients[ip]; !ok {
 				clients[ip] = &client{
 					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
 				}
@@ -67,28 +75,34 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			}
 			mu.Unlock()
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip Swagger
+		if strings.HasPrefix(r.URL.Path, "/v1/swagger") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		w.Header().Add("Vary", "Authorization")
-		authorizationHeader := r.Header.Get("Authorization")
-		if authorizationHeader ==
-			"" {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
 			r = app.contextSetUser(r, data.AnonymousUser)
 			next.ServeHTTP(w, r)
 			return
 		}
-		headerParts := strings.Split(authorizationHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
 			app.invalidAuthenticationTokenResponse(w, r)
 			return
 		}
 
-		token := headerParts[1]
-
+		token := parts[1]
 		v := validator.New()
 		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
 			app.invalidAuthenticationTokenResponse(w, r)
@@ -111,15 +125,14 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 }
 
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return app.requireAuthenticatedUser(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
 		if !user.Activated {
 			app.inactiveAccountResponse(w, r)
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
-	return app.requireAuthenticatedUser(fn)
+	}))
 }
 
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
@@ -134,34 +147,34 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 }
 
 func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return app.requireActivatedUser(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
-
-		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+		perms, err := app.models.Permissions.GetAllForUser(user.ID)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
 
-		if !permissions.Include(code) {
+		if !perms.Include(code) {
 			app.notPermittedResponse(w, r)
 			return
 		}
 		next.ServeHTTP(w, r)
-
-	})
-	return app.requireActivatedUser(fn)
+	}))
 }
 
 func (app *application) enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip Swagger
+		if strings.HasPrefix(r.URL.Path, "/v1/swagger") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
-			// Set the necessary preflight response headers
-			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, PATCH, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-
-			// Respond with 200 OK and return early
 			w.WriteHeader(http.StatusOK)
 			return
 		}

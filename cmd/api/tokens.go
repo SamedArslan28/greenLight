@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"greenlight.samedarslan28.net/internal/data"
-	"greenlight.samedarslan28.net/internal/validator"
 	"net/http"
 	"time"
+
+	"greenlight.samedarslan28.net/internal/data"
+	"greenlight.samedarslan28.net/internal/validator"
 )
 
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {

@@ -6,8 +6,9 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
-	"greenlight.samedarslan28.net/internal/validator"
 	"time"
+
+	"greenlight.samedarslan28.net/internal/validator"
 )
 
 const (
@@ -15,6 +16,8 @@ const (
 	ScopeAuthentication = "authentication"
 )
 
+// Token represents an authentication token for a user.
+// Used for API authentication and session handling.
 type Token struct {
 	Plaintext string    `json:"token"`
 	Hash      []byte    `json:"-"`

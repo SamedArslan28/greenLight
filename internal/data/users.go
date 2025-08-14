@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 	"greenlight.samedarslan28.net/internal/validator"
-	"time"
 )
 
+// User represents a registered user of the system.
 type User struct {
 	ID        int64     `json:"id"`
 	CreatedAt time.Time `json:"created_at"`

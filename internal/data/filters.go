@@ -1,24 +1,45 @@
 package data
 
 import (
-	"greenlight.samedarslan28.net/internal/validator"
 	"math"
 	"strings"
+
+	"greenlight.samedarslan28.net/internal/validator"
 )
 
+// Filters represents pagination and sorting options for listing resources.
+// Used in query parameters to control page size, page number, and sorting order.
 type Filters struct {
-	Page         int
-	PageSize     int
-	Sort         string
-	SortSafelist []string
+	// Page number of the results to fetch (starting from 1)
+	Page int `json:"page" example:"1"`
+
+	// Number of results per page
+	PageSize int `json:"page_size" example:"20"`
+
+	// Field to sort results by (e.g., "name" or "-created_at" for descending)
+	Sort string `json:"sort" example:"-created_at"`
+
+	// List of allowed sort fields (internal use; not passed by client)
+	SortSafelist []string `json:"-" swaggerignore:"true"`
 }
 
+// Metadata provides information about the paginated response.
+// Returned alongside paginated results to help the client navigate pages.
 type Metadata struct {
-	CurrentPage  int `json:"current_page,omitempty"`
-	PageSize     int `json:"page_size,omitempty"`
-	FirstPage    int `json:"first_page,omitempty"`
-	LastPage     int `json:"last_page,omitempty"`
-	TotalRecords int `json:"total_records,omitempty"`
+	// Current page number
+	CurrentPage int `json:"current_page,omitempty" example:"1"`
+
+	// Number of results per page
+	PageSize int `json:"page_size,omitempty" example:"20"`
+
+	// First page number in the result set
+	FirstPage int `json:"first_page,omitempty" example:"1"`
+
+	// Last page number in the result set
+	LastPage int `json:"last_page,omitempty" example:"5"`
+
+	// Total number of records across all pages
+	TotalRecords int `json:"total_records,omitempty" example:"100"`
 }
 
 func ValidateFilters(v *validator.Validator, f Filters) {

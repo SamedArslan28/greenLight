@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"greenlight.samedarslan28.net/internal/validator"
 	"io"
 	"log"
 	"net/http"
@@ -13,9 +11,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/julienschmidt/httprouter"
+	"greenlight.samedarslan28.net/internal/validator"
 )
 
 type envelope map[string]interface{}
+
+// Envelope is a generic response wrapper
+// @Description Generic envelope object
+type Envelope struct {
+	Data interface{} `json:"data"`
+}
 
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())

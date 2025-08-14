@@ -3,11 +3,27 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
+
 	"greenlight.samedarslan28.net/internal/data"
 	"greenlight.samedarslan28.net/internal/validator"
-	"net/http"
 )
 
+type MovieResponse struct {
+	Movie data.Movie `json:"movie"`
+}
+
+// CreateMovieHandler godoc
+//
+//	@Summary		Create a new movie
+//	@Description	Creates a movie with the provided details.
+//	@Tags			movies
+//	@Accept			json
+//	@Produce		json
+//	@Success		201		{object}	MovieResponse
+//	@Failure		400		{object}	envelope
+//	@Failure		422		{object}	envelope
+//	@Router			/v1/movies [post]
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Title   string       `json:"title"`
@@ -52,6 +68,16 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// ShowMovieHandler godoc
+//
+//	@Summary		Get a single movie
+//	@Description	Retrieves a movie by its ID.
+//	@Tags			movies
+//	@Produce		json
+//	@Param			id	path		int	true	"Movie ID"
+//	@Success		200	{object}	map[string]data.Movie
+//	@Failure		404	{object}	map[string]string
+//	@Router			/v1/movies/{id} [get]
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
@@ -77,6 +103,20 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// UpdateMovieHandler godoc
+//
+//	@Summary		Update an existing movie
+//	@Description	Updates details of a movie by its ID.
+//	@Tags			movies
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int			true	"Movie ID"
+//	@Param			movie	body		data.Movie	true	"Updated movie object"
+//	@Success		200		{object}	map[string]data.Movie
+//	@Failure		400		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		409		{object}	map[string]string
+//	@Router			/v1/movies/{id} [put]
 func (app *application) updateMovieHandler(writer http.ResponseWriter, request *http.Request) {
 	id, err := app.readIDParam(request)
 	if err != nil {
@@ -139,6 +179,16 @@ func (app *application) updateMovieHandler(writer http.ResponseWriter, request *
 	}
 }
 
+// DeleteMovieHandler godoc
+//
+//	@Summary		Delete a movie
+//	@Description	Removes a movie by its ID.
+//	@Tags			movies
+//	@Produce		json
+//	@Param			id	path		int	true	"Movie ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Router			/v1/movies/{id} [delete]
 func (app *application) deleteMovieHandler(writer http.ResponseWriter, request *http.Request) {
 	id, err := app.readIDParam(request)
 	if err != nil {
@@ -157,6 +207,20 @@ func (app *application) deleteMovieHandler(writer http.ResponseWriter, request *
 	}
 }
 
+// ListMoviesHandler godoc
+//
+//	@Summary		List all movies
+//	@Description	Retrieves a list of movies with optional filters, pagination, and sorting.
+//	@Tags			movies
+//	@Produce		json
+//	@Param			title		query		string		false	"Filter by title"
+//	@Param			genres		query		[]string	false	"Filter by genres (comma separated)"
+//	@Param			page		query		int			false	"Page number"
+//	@Param			page_size	query		int			false	"Page size"
+//	@Param			sort		query		string		false	"Sort by field"
+//	@Success		200			{object}	map[string]interface{}
+//	@Failure		400			{object}	map[string]string
+//	@Router			/v1/movies [get]
 func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Title  string

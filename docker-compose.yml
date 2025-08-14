@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: greenlight-postgres
+    environment:
+      POSTGRES_USER: samedarslan3428
+      POSTGRES_PASSWORD: Samedarslan3428
+      POSTGRES_DB: greenlight
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:

@@ -1,5 +1,4 @@
 # Load .env variables and export them
-include .env
 
 ## help: print this help message
 help:

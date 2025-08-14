@@ -3,8 +3,9 @@ package data
 import (
 	"context"
 	"database/sql"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type Permissions []string
