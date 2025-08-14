@@ -35,16 +35,43 @@ import (
 	"greenlight.samedarslan28.net/internal/data"
 	"greenlight.samedarslan28.net/internal/jsonlog"
 	"greenlight.samedarslan28.net/internal/mailer"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	version   string
 	buildTime string
 
-	totalRequestsReceived           = expvar.NewInt("total_requests_received")
-	totalResponsesSent              = expvar.NewInt("total_responses_sent")
-	totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_μs")
-	totalResponsesSentByStatus      = expvar.NewMap("total_responses_sent_by_status")
+	totalRequests = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests received",
+		},
+	)
+
+	totalResponses = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "http_responses_total",
+			Help: "Total number of HTTP responses sent",
+		},
+	)
+
+	responseStatus = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_responses_by_status_total",
+			Help: "Total number of HTTP responses by status code",
+		},
+		[]string{"status"},
+	)
+
+	requestDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Histogram of request processing durations",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
 )
 
 type config struct {
@@ -78,6 +105,10 @@ type application struct {
 	models data.Models
 	mailer mailer.Mailer
 	wg     sync.WaitGroup
+}
+
+func init() {
+	prometheus.MustRegister(totalRequests, totalResponses, responseStatus, requestDuration)
 }
 
 func main() {
@@ -189,12 +220,14 @@ func openDB(cfg config) (*sql.DB, error) {
 
 func (app *application) metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		totalRequestsReceived.Add(1)
+		totalRequests.Inc()
 
+		start := time.Now()
 		metrics := httpsnoop.CaptureMetrics(next, w, r)
+		duration := time.Since(start).Seconds()
 
-		totalResponsesSent.Add(1)
-		totalProcessingTimeMicroseconds.Add(metrics.Duration.Microseconds())
-		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
+		totalResponses.Inc()
+		responseStatus.WithLabelValues(strconv.Itoa(metrics.Code)).Inc()
+		requestDuration.Observe(duration)
 	})
 }

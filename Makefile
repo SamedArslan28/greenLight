@@ -9,7 +9,7 @@ confirm:
 	@echo 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
 
 ## run/api: run the cmd/api application
-run/api:
+run/api: up
 	@go run ./cmd/api -db-dsn="${DB_DSN}"
 
 ## db/psql: connect to the database using psql
@@ -54,5 +54,19 @@ build/api:
 
 	@echo 'Building cmd/api for linux/amd64...'
 	GOOS=linux GOARCH=amd64 go build -ldflags=${linker_flags} -o ./bin/linux_amd64/api ./cmd/api
+# Start monitoring stack
+up:
+	 docker compose up -d
 
-.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new audit build/api
+# Stop monitoring stack
+down:
+	 docker compose down
+
+# Restart monitoring stack
+restart: down up
+
+# View logs
+logs:
+	@echo docker-compose logs -f
+
+.PHONY: help confirm run/api db/psql db/migrations/up db/migrations/new audit build/api up down restart logs
