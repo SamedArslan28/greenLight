@@ -9,6 +9,29 @@ import (
 	"greenlight.samedarslan28.net/internal/validator"
 )
 
+// RegisterUserRequest represents the request body for user registration.
+type RegisterUserRequest struct {
+	Username string `json:"name" example:"John Doe"`
+	Email    string `json:"email" example:"john@example.com"`
+	Password string `json:"password" example:"secret123"`
+}
+
+// RegisterUserResponse represents the response after successful registration.
+type RegisterUserResponse struct {
+	User data.User `json:"user"`
+}
+
+// registerUserHandler godoc
+// @Summary      Register a new user
+// @Description  Creates a new user account and sends an activation email.
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RegisterUserRequest  true  "User registration data"
+// @Success      201  {object}  RegisterUserResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      409  {object}  map[string]interface{}
+// @Router       /users [post]
 func (app *application) registerUserHandler(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		Username string `json:"name"`
@@ -84,6 +107,27 @@ func (app *application) registerUserHandler(writer http.ResponseWriter, request 
 	}
 }
 
+// ActivateUserRequest represents the request body for activating a user account.
+type ActivateUserRequest struct {
+	TokenPlaintext string `json:"token" example:"abc123activation-token"`
+}
+
+// ActivateUserResponse represents the response after account activation.
+type ActivateUserResponse struct {
+	User data.User `json:"user"`
+}
+
+// activateUserHandler godoc
+// @Summary      Activate a user account
+// @Description  Activates a user account using a valid activation token.
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        request  body      ActivateUserRequest  true  "Activation token"
+// @Success      200  {object}  ActivateUserResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /users/activated [put]
 func (app *application) activateUserHandler(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		TokenPlaintext string `json:"token"`
